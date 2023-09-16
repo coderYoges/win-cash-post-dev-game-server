@@ -77,10 +77,11 @@ async function setAnBGameResults(sequenceNumber) {
         if (totalAndar === totalBahar) {
           winnerOption = "TIE";
           listLength =
-          highBiter === "ANDAR" ? 2 : highBiter === "BAHAR" ? 3 : 4;
+            highBiter === "ANDAR" ? 2 : highBiter === "BAHAR" ? 3 : 4;
           if (sequenceNumber % 2 === 0) {
             winnerOption = lowBiter;
-            listLength = lowBiter === "ANDAR" ? 2 : lowBiter === "BAHAR" ? 3 : 4;
+            listLength =
+              lowBiter === "ANDAR" ? 2 : lowBiter === "BAHAR" ? 3 : 4;
           } else {
             winnerOption = highBiter;
             listLength =
@@ -100,11 +101,8 @@ async function setAnBGameResults(sequenceNumber) {
             winnerOption = lowBiter;
             listLength =
               highBiter === "ANDAR" ? 2 : highBiter === "BAHAR" ? 3 : 4;
-         
           }
         }
-
-
       } else if (gameMode === "low") {
         const { totalAndar = 0, totalBahar = 0, totalTie = 0 } = gameSeqResp;
 
@@ -193,6 +191,41 @@ async function setAnBGameResults(sequenceNumber) {
             method: "updateOne",
           };
           await db(setUserGameRes);
+        });
+
+      gameSeqResp.players &&
+        gameSeqResp.players.map(async (player) => {
+          const relatedParents = [
+            player.tier1Parent,
+            player.tier2Parent,
+            player.tier3Parent,
+          ];
+          relatedParents.map(async (parent) => {
+            if (!isEmpty(parent)) {
+              let isWon = player.betOption === winnerOption;
+              let amount;
+              if (isWon) {
+                amount =
+                  winnerOption === "TIE"
+                  ? player.betAmount * 9 - (player.betAmount * 9) / 50
+                  : player.betAmount * 2 - player.betAmount / 25;
+              } else {
+                amount = -player.betAmount;
+              }
+              const adminsReq = {
+                query: { userName: player.userName },
+                update: {
+                  $inc: {
+                    plBalance: amount,
+                  },
+                },
+                database: "admin-panel",
+                collection: "admin",
+                method: "updateOne",
+              };
+              await db(adminsReq);
+            }
+          });
         });
     }
   } catch (err) {

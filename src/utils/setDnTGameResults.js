@@ -175,6 +175,41 @@ async function setDnTGameResults(sequenceNumber) {
           };
           await db(setUserGameRes);
         });
+
+      gameSeqResp.players &&
+        gameSeqResp.players.map(async (player) => {
+          const relatedParents = [
+            player.tier1Parent,
+            player.tier2Parent,
+            player.tier3Parent,
+          ];
+          relatedParents.map(async (parent) => {
+            if (!isEmpty(parent)) {
+              let isWon = player.betOption === winnerOption;
+              let amount;
+              if (isWon) {
+                amount =
+                  winnerOption === "TIE"
+                    ? player.betAmount * 9 - (player.betAmount * 9) / 50
+                    : player.betAmount * 2 - player.betAmount / 25;
+              } else {
+                amount = -player.betAmount;
+              }
+              const adminsReq = {
+                query: { userName: player.userName },
+                update: {
+                  $inc: {
+                    plBalance: amount,
+                  },
+                },
+                database: "admin-panel",
+                collection: "admin",
+                method: "updateOne",
+              };
+              await db(adminsReq);
+            }
+          });
+        });
     }
   } catch (err) {
     console.log(err);
